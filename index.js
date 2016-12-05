@@ -1,4 +1,4 @@
-(function (win, jQuery) {
+(function (win, $) {
   var iframeCount = 0;
 
   function Uploader(options) {
@@ -49,7 +49,7 @@
 
     var data = this.settings.data;
     this.form.append(createInputs(data));
-    if (window.FormData) {
+    if (win.FormData) {
       this.form.append(createInputs({'_uploader_': 'formdata'}));
     } else {
       this.form.append(createInputs({'_uploader_': 'iframe'}));
@@ -127,7 +127,7 @@ Uploader.prototype.bindInput = function() {
 // prepare for submiting form
 Uploader.prototype.submit = function() {
   var self = this;
-  if (window.FormData && self._files) {
+  if (win.FormData && self._files) {
     // build a FormData
     var form = new FormData(self.form.get(0));
     // use FormData to upload
