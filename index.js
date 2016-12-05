@@ -1,63 +1,63 @@
-var $ = require('jquery');
-var iframeCount = 0;
+(function (win, jQuery) {
+  var iframeCount = 0;
 
-function Uploader(options) {
-  if (!(this instanceof Uploader)) {
-    return new Uploader(options);
-  }
-  if (isString(options)) {
-    options = {trigger: options};
-  }
+  function Uploader(options) {
+    if (!(this instanceof Uploader)) {
+      return new Uploader(options);
+    }
+    if (isString(options)) {
+      options = {trigger: options};
+    }
 
-  var settings = {
-    trigger: null,
-    name: null,
-    action: null,
-    data: null,
-    accept: null,
-    change: null,
-    error: null,
-    multiple: true,
-    success: null
-  };
-  if (options) {
-    $.extend(settings, options);
-  }
-  var $trigger = $(settings.trigger);
+    var settings = {
+      trigger: null,
+      name: null,
+      action: null,
+      data: null,
+      accept: null,
+      change: null,
+      error: null,
+      multiple: true,
+      success: null
+    };
+    if (options) {
+      $.extend(settings, options);
+    }
+    var $trigger = $(settings.trigger);
 
-  settings.action = settings.action || $trigger.data('action') || '/upload';
-  settings.name = settings.name || $trigger.attr('name') || $trigger.data('name') || 'file';
-  settings.data = settings.data || parse($trigger.data('data'));
-  settings.accept = settings.accept || $trigger.data('accept');
-  settings.success = settings.success || $trigger.data('success');
-  this.settings = settings;
+    settings.action = settings.action || $trigger.data('action') || '/upload';
+    settings.name = settings.name || $trigger.attr('name') || $trigger.data('name') || 'file';
+    settings.data = settings.data || parse($trigger.data('data'));
+    settings.accept = settings.accept || $trigger.data('accept');
+    settings.success = settings.success || $trigger.data('success');
+    this.settings = settings;
 
-  this.setup();
-  this.bind();
-}
-
-// initialize
-// create input, form, iframe
-Uploader.prototype.setup = function() {
-  this.form = $(
-    '<form method="post" enctype="multipart/form-data"'
-    + 'target="" action="' + this.settings.action + '" />'
-  );
-
-  this.iframe = newIframe();
-  this.form.attr('target', this.iframe.attr('name'));
-
-  var data = this.settings.data;
-  this.form.append(createInputs(data));
-  if (window.FormData) {
-    this.form.append(createInputs({'_uploader_': 'formdata'}));
-  } else {
-    this.form.append(createInputs({'_uploader_': 'iframe'}));
+    this.setup();
+    this.bind();
   }
 
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.name = this.settings.name;
+  // initialize
+  // create input, form, iframe
+  Uploader.prototype.setup = function() {
+    this.form = $(
+      '<form method="post" enctype="multipart/form-data"'
+      + 'target="" action="' + this.settings.action + '" />'
+    );
+
+    this.iframe = newIframe();
+    this.form.attr('target', this.iframe.attr('name'));
+
+    var data = this.settings.data;
+    this.form.append(createInputs(data));
+    if (window.FormData) {
+      this.form.append(createInputs({'_uploader_': 'formdata'}));
+    } else {
+      this.form.append(createInputs({'_uploader_': 'iframe'}));
+    }
+
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.name = this.settings.name;
   if (this.settings.accept) {
     input.accept = this.settings.accept;
   }
@@ -296,78 +296,79 @@ function parse(str) {
   return ret;
 }
 
-function findzIndex($node) {
-  var parents = $node.parentsUntil('body');
-  var zIndex = 0;
-  for (var i = 0; i < parents.length; i++) {
-    var item = parents.eq(i);
-    if (item.css('position') !== 'static') {
-      zIndex = parseInt(item.css('zIndex'), 10) || zIndex;
+  function findzIndex($node) {
+    var parents = $node.parentsUntil('body');
+    var zIndex = 0;
+    for (var i = 0; i < parents.length; i++) {
+      var item = parents.eq(i);
+      if (item.css('position') !== 'static') {
+        zIndex = parseInt(item.css('zIndex'), 10) || zIndex;
+      }
     }
-  }
-  return zIndex;
-}
+      return zIndex;
+    }
 
-function newIframe() {
-  var iframeName = 'iframe-uploader-' + iframeCount;
-  var iframe = $('<iframe name="' + iframeName + '" />').hide();
-  iframeCount += 1;
-  return iframe;
-}
-
-function MultipleUploader(options) {
-  if (!(this instanceof MultipleUploader)) {
-    return new MultipleUploader(options);
+  function newIframe() {
+    var iframeName = 'iframe-uploader-' + iframeCount;
+    var iframe = $('<iframe name="' + iframeName + '" />').hide();
+    iframeCount += 1;
+    return iframe;
   }
 
-  if (isString(options)) {
-    options = {trigger: options};
+  function MultipleUploader(options) {
+    if (!(this instanceof MultipleUploader)) {
+      return new MultipleUploader(options);
+    }
+
+    if (isString(options)) {
+      options = {trigger: options};
+    }
+    var $trigger = $(options.trigger);
+
+    var uploaders = [];
+    $trigger.each(function(i, item) {
+      options.trigger = item;
+      uploaders.push(new Uploader(options));
+    });
+    this._uploaders = uploaders;
   }
-  var $trigger = $(options.trigger);
+  MultipleUploader.prototype.submit = function() {
+    $.each(this._uploaders, function(i, item) {
+      item.submit();
+    });
+    return this;
+  };
+  MultipleUploader.prototype.change = function(callback) {
+    $.each(this._uploaders, function(i, item) {
+      item.change(callback);
+    });
+    return this;
+  };
+  MultipleUploader.prototype.success = function(callback) {
+    $.each(this._uploaders, function(i, item) {
+      item.success(callback);
+    });
+    return this;
+  };
+  MultipleUploader.prototype.error = function(callback) {
+    $.each(this._uploaders, function(i, item) {
+      item.error(callback);
+    });
+    return this;
+  };
+  MultipleUploader.prototype.enable = function (){
+    $.each(this._uploaders, function (i, item){
+      item.enable();
+    });
+    return this;
+  };
+  MultipleUploader.prototype.disable = function (){
+    $.each(this._uploaders, function (i, item){
+      item.disable();
+    });
+    return this;
+  };
+  MultipleUploader.Uploader = Uploader;
 
-  var uploaders = [];
-  $trigger.each(function(i, item) {
-    options.trigger = item;
-    uploaders.push(new Uploader(options));
-  });
-  this._uploaders = uploaders;
-}
-MultipleUploader.prototype.submit = function() {
-  $.each(this._uploaders, function(i, item) {
-    item.submit();
-  });
-  return this;
-};
-MultipleUploader.prototype.change = function(callback) {
-  $.each(this._uploaders, function(i, item) {
-    item.change(callback);
-  });
-  return this;
-};
-MultipleUploader.prototype.success = function(callback) {
-  $.each(this._uploaders, function(i, item) {
-    item.success(callback);
-  });
-  return this;
-};
-MultipleUploader.prototype.error = function(callback) {
-  $.each(this._uploaders, function(i, item) {
-    item.error(callback);
-  });
-  return this;
-};
-MultipleUploader.prototype.enable = function (){
-  $.each(this._uploaders, function (i, item){
-    item.enable();
-  });
-  return this;
-};
-MultipleUploader.prototype.disable = function (){
-  $.each(this._uploaders, function (i, item){
-    item.disable();
-  });
-  return this;
-};
-MultipleUploader.Uploader = Uploader;
-
-module.exports = MultipleUploader;
+  win.MultipleUploader = MultipleUploader;
+})(window, jQuery);
